@@ -1,0 +1,35 @@
+latai core binary licence (DRAFT, task 16.1.3: to be reviewed by the owner's counsel before release)
+
+Copyright (c) the latai authors. All rights reserved.
+
+"The Core" means the prebuilt binary files distributed with or fetched by a latai SDK: the
+library liblatai (liblatai.so, liblatai.dylib, latai.dll, liblatai.a, Latai.xcframework), the
+executable latai, and the files under lib/latai/ that are not third-party components. Third-party
+components inside the Core are licensed under their own terms, listed in THIRD_PARTY_LICENSES and
+NOTICE beside it; nothing here limits the rights those terms give you.
+
+1. Grant. You may, free of charge, use the Core, and copy and redistribute it unmodified as part of
+   an application or library that uses it through a latai SDK or the C interface in include/,
+   in source or binary form of your own software, for any purpose, commercial included.
+
+2. Conditions. Any redistribution must include this licence, THIRD_PARTY_LICENSES and NOTICE, and
+   must not remove or change any notice in the Core.
+
+3. Restrictions. You may not: (a) modify, adapt or translate the Core; (b) reverse engineer,
+   decompile or disassemble it, except to the extent the applicable law expressly permits it
+   notwithstanding this restriction; (c) distribute the Core on its own, outside software that
+   uses it; (d) use the latai name or marks to endorse your software without permission.
+
+4. Models. The Core runs model packs that you supply or obtain; their licences are theirs. Nothing
+   here licenses a model.
+
+5. No warranty. THE CORE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
+   AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE CORE OR THE USE OR OTHER DEALINGS IN THE CORE.
+
+6. Termination. This licence ends automatically if you break its terms; sections 3 and 5 survive.
+
+The source code of the latai SDKs is licensed separately under Apache-2.0 OR MIT (LICENSE-APACHE,
+LICENSE-MIT); this licence covers only the Core.

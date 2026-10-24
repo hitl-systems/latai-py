@@ -1,0 +1,3405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Wire",
+  "description": "The root type of `schema/latai.schema.json`: every type that crosses a boundary.",
+  "type": "object",
+  "properties": {
+    "request": {
+      "$ref": "#/$defs/Request"
+    },
+    "response": {
+      "$ref": "#/$defs/Response"
+    },
+    "event": {
+      "$ref": "#/$defs/Event"
+    },
+    "stream_open": {
+      "$ref": "#/$defs/StreamOpen"
+    },
+    "stream_event": {
+      "$ref": "#/$defs/StreamEvent"
+    },
+    "error": {
+      "$ref": "#/$defs/Error"
+    },
+    "manifest": {
+      "$ref": "#/$defs/Manifest"
+    },
+    "receipt": {
+      "$ref": "#/$defs/StageReceipt"
+    },
+    "pack_info": {
+      "$ref": "#/$defs/PackInfo"
+    },
+    "runtime_info": {
+      "$ref": "#/$defs/RuntimeInfo"
+    },
+    "status": {
+      "$ref": "#/$defs/Status"
+    },
+    "pack_version": {
+      "$ref": "#/$defs/PackVersion"
+    }
+  },
+  "required": [
+    "request",
+    "response",
+    "event",
+    "stream_open",
+    "stream_event",
+    "error",
+    "manifest",
+    "receipt",
+    "pack_info",
+    "runtime_info",
+    "status",
+    "pack_version"
+  ],
+  "$defs": {
+    "Request": {
+      "type": "object",
+      "properties": {
+        "pack": {
+          "description": "The pack to run.",
+          "type": "string"
+        },
+        "inputs": {
+          "$ref": "#/$defs/Inputs"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "session": {
+          "description": "A KV-reuse hint; every request still carries its full inputs.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stream": {
+          "type": "boolean",
+          "default": false
+        },
+        "deadline_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "expect_digest": {
+          "description": "Refuse the run unless the pack's digest is this (lower-case sha256 hex).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "then": {
+          "description": "A second stage (12.2.1): after this request's run ends, the text pack named here runs on\nthe transcript (the run's `text`), as the same request: one id, one deadline, one cancel.\nSee [`Then`].",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Then"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pack",
+        "inputs"
+      ]
+    },
+    "Inputs": {
+      "description": "What the pack is fed. The `type` field picks the kind.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "text"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "text"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "messages": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Message"
+              }
+            },
+            "tools": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Tool"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "messages"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "messages"
+          ]
+        },
+        {
+          "description": "Named fields, one per segment of the pack.",
+          "type": "object",
+          "properties": {
+            "record": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "type": {
+              "type": "string",
+              "const": "record"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "record"
+          ]
+        },
+        {
+          "description": "An audio clip for a speech pack (11.1.1).",
+          "type": "object",
+          "properties": {
+            "data": {
+              "description": "The clip, base64 (RFC 4648 standard alphabet, padded, no line breaks).",
+              "type": "string"
+            },
+            "format": {
+              "description": "What `data` holds; `wav` when absent.",
+              "$ref": "#/$defs/AudioFormat"
+            },
+            "sample_rate": {
+              "description": "The sample rate of raw `pcm16` samples, in Hz; the pack's rate when absent. For `wav` the\nheader says; a value here must agree with it.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "language": {
+              "description": "Force the spoken language (a code such as `en`): the decoder gets the pack's `<|en|>`\ntoken before it starts. `E0315` when the pack's vocabulary has no such token.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "prompt": {
+              "description": "Text the decoder is given after the audio (a hint or an instruction); at most\n[`crate::audio::MAX_AUDIO_PROMPT_BYTES`] bytes.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "prompt_before": {
+              "description": "Text the decoder is given before the audio, at most the same bytes; control-token text in\nit is read as the token, as in a chat prompt.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "outputs": {
+              "description": "What the response carries beyond the text. The pack must declare each one in\n`latai.audio.outputs`; `embeddings` only for a clip of one pass.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/AudioOutput"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "audio"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "data"
+          ]
+        },
+        {
+          "description": "An image for a vision pack (15.4.1).",
+          "type": "object",
+          "properties": {
+            "data": {
+              "description": "The image, base64 (RFC 4648 standard alphabet, padded, no line breaks).",
+              "type": "string"
+            },
+            "format": {
+              "description": "What `data` holds; found from its first bytes when absent (PNG or JPEG only).",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ImageFormat"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "width": {
+              "description": "The width and height of `rgb8` pixels; refused with a file format, which has its own.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "height": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "prompt": {
+              "description": "Text the decoder is given after the image (an instruction such as \"read the text\"); at\nmost [`crate::image::MAX_IMAGE_PROMPT_BYTES`] bytes. Control-token text in it is read as\nthe token, as in a chat prompt.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "prompt_before": {
+              "description": "Text the decoder is given before the image, at most the same bytes, read the same way\n(a chat template's opening of a user turn, for a model that needs one).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "image"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "data"
+          ]
+        },
+        {
+          "description": "An input kind added by a plug-in.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string"
+            },
+            "data": true,
+            "type": {
+              "type": "string",
+              "const": "plugin"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "kind",
+            "data"
+          ]
+        }
+      ]
+    },
+    "Message": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/Role"
+        },
+        "content": {
+          "description": "Empty for an assistant message that only carries `tool_calls`.",
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_call_id": {
+          "description": "For a `tool` message: which call it answers.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_calls": {
+          "description": "For an `assistant` message: the calls it made.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/ToolCall"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "role"
+      ]
+    },
+    "Role": {
+      "type": "string",
+      "enum": [
+        "system",
+        "user",
+        "assistant",
+        "tool"
+      ]
+    },
+    "ToolCall": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "arguments": true
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "arguments"
+      ]
+    },
+    "Tool": {
+      "description": "A tool the model may call, in the OpenAI function shape (the one tool shape on the wire):\n`{\"type\":\"function\",\"function\":{\"name\":..,\"description\":..,\"parameters\":<JSON Schema>}}`.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/ToolKind"
+        },
+        "function": {
+          "$ref": "#/$defs/ToolFunction"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "function"
+      ]
+    },
+    "ToolKind": {
+      "type": "string",
+      "enum": [
+        "function"
+      ]
+    },
+    "ToolFunction": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parameters": {
+          "description": "A JSON Schema object; normalised once at bind time (4.2.4)."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "parameters"
+      ]
+    },
+    "AudioFormat": {
+      "description": "How the bytes of an [`AudioInput`] are laid out.",
+      "oneOf": [
+        {
+          "description": "A RIFF/WAVE file: 16-bit PCM, one channel (also as `WAVE_FORMAT_EXTENSIBLE` PCM).",
+          "type": "string",
+          "const": "wav"
+        },
+        {
+          "description": "Raw 16-bit little-endian signed samples, one channel.",
+          "type": "string",
+          "const": "pcm16"
+        }
+      ]
+    },
+    "AudioOutput": {
+      "description": "One kind of output a speech pack declares (`latai.audio.outputs`).",
+      "type": "string",
+      "enum": [
+        "transcript",
+        "timestamps",
+        "language",
+        "embeddings"
+      ]
+    },
+    "ImageFormat": {
+      "description": "How the bytes of an [`ImageInput`] are laid out.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "png",
+            "jpeg"
+          ]
+        },
+        {
+          "description": "Raw 8-bit RGB, row-major, `width * height * 3` bytes.",
+          "type": "string",
+          "const": "rgb8"
+        }
+      ]
+    },
+    "OutputOptions": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "description": "A JSON Schema the output must follow."
+        },
+        "tool_choice": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolChoice"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parallel_tool_calls": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "max_tokens": {
+          "description": "At most 512 (the ceiling); checked against it at run time.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "stop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "logprobs": {
+          "description": "How many alternatives to return per generated token.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "keywords": {
+          "description": "Words the decoder should prefer (11.2.3): each is tokenized with and without a leading\nspace and its tokens get a logit bonus inside the one `pick`, a token only after the\ntokens of the keyword that precede it. At most [`KEYWORDS_MAX`] keywords of at most\n[`KEYWORD_MAX_BYTES`] bytes and [`KEYWORD_MAX_TOKENS`] tokens (`E0312`).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "keyword_boost": {
+          "description": "The bonus added to a keyword token's logit: above 0 and at most [`KEYWORD_BOOST_MAX`];\n[`KEYWORD_BOOST_DEFAULT`] when absent (`E0315` outside the range).",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "depth": {
+          "description": "The number of layers the pack is expected to run at (13.1.2): it must be the depth the pack\nis served at, which is one of the pack's `latai.depth.allowed`. A pack serves one depth at\na time (the config picks it, `[depth]` in `latai.toml`); `E0315` for any other value.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "tools_top_k": {
+          "description": "Keep at most this many tools in the prompt when the pack retrieves them (13.3.2): 1 to the\npack's `latai.tools.top_k`. `E0312 tools_prompt` above it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "ToolChoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolChoiceMode"
+        },
+        {
+          "$ref": "#/$defs/NamedToolChoice"
+        }
+      ]
+    },
+    "ToolChoiceMode": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "none",
+        "required"
+      ]
+    },
+    "NamedToolChoice": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "Digest": {
+      "description": "A sha256 digest.",
+      "type": "string"
+    },
+    "Then": {
+      "description": "The second stage of a chained run (12.2.1): a speech pack (or any pack whose output is text)\nfirst, then this pack with the first stage's text as its input.\n\nThe text becomes the pack's input by the pack's own input kind: a `text` pack gets\n`{\"type\":\"text\",\"text\":<transcript>}`; a `messages` pack gets the optional `system` message and\nthen one `user` message holding the transcript, plus `tools`. The result equals running the two\npacks by hand with those inputs ([`Then::inputs`] builds them). The stages are two runs on the\nowner thread's queue, one after the other; `deadline_ms` of the request covers both, `cancel`\nreaches whichever runs, and the response's `latai.stages` has the timing of each.",
+      "type": "object",
+      "properties": {
+        "pack": {
+          "description": "The pack that takes the transcript.",
+          "type": "string"
+        },
+        "system": {
+          "description": "A system message placed before the transcript; for a `messages` pack only (`E0315`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tools": {
+          "description": "The tools the second stage may call; for a `messages` pack only (`E0315`).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Tool"
+          }
+        },
+        "output": {
+          "description": "The second stage's output options (a schema, `tool_choice`, `max_tokens`, ...). The first\nstage keeps the request's own `output`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expect_digest": {
+          "description": "Refuse the second stage unless its pack's digest is this.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pack"
+      ]
+    },
+    "Response": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "$ref": "#/$defs/Output"
+        },
+        "logprobs": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LogprobStep"
+          }
+        },
+        "finish": {
+          "$ref": "#/$defs/Finish"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prompt_truncated": {
+          "description": "True when an encoder segment was cut to its `max_len`. Decoder prompts are never cut.",
+          "type": "boolean"
+        },
+        "confidence": {
+          "description": "The calibrated confidence in [0, 1] of a decoder pack that declares a confidence head\n(`latai.io.confidence.*`, 13.2.1); absent for every other pack.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "latai": {
+          "$ref": "#/$defs/Meta"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "output",
+        "finish",
+        "prompt_truncated",
+        "latai"
+      ]
+    },
+    "Output": {
+      "description": "What the pack produced. The `kind` field picks the shape.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "text"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text"
+          ]
+        },
+        {
+          "description": "Generated text that may hold tool calls. `calls: []` means the model abstained inside the\ncall window; `calls: null` means it emitted no call markers at all.",
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "calls": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/$defs/ToolCall"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "calls"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": true,
+            "kind": {
+              "type": "string",
+              "const": "json"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "heads": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/HeadChoices"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "choices"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "heads"
+          ]
+        },
+        {
+          "description": "One vector per input segment, in the pack's segment order (6.2, 6.3).",
+          "type": "object",
+          "properties": {
+            "vectors": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/NamedVector"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "vector"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "vectors"
+          ]
+        },
+        {
+          "description": "What a speech pack made of an audio clip (11.2.2). Only an `audio` input gets it; a text\ninput to the same pack gets `text`.",
+          "type": "object",
+          "properties": {
+            "text": {
+              "description": "The transcript, timestamp and language tokens left out. A clip that was run in\nwindows has their texts merged where they overlap.",
+              "type": "string"
+            },
+            "language": {
+              "description": "The language code the decoder named (`en` for its `<|en|>` token) or the one the\nrequest forced; absent when the request did not ask for `language` or the decoder\nnamed none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "timestamps": {
+              "description": "The spans between the decoder's timestamp tokens, in seconds from the start of the\nclip; empty unless the request asked for `timestamps` and the decoder emits them.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TimedText"
+              }
+            },
+            "embeddings": {
+              "description": "The rows the audio encoder gave the decoder; only when the request asked for\n`embeddings`.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SpeechEmbeddings"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "const": "transcript"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text"
+          ]
+        }
+      ]
+    },
+    "HeadChoices": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "probs": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          }
+        },
+        "argmax": {
+          "description": "Index of the largest probability (the first one on a tie).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "labels",
+        "probs",
+        "argmax"
+      ]
+    },
+    "NamedVector": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The segment's name from the manifest (`text` for a plain text input).",
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "values"
+      ]
+    },
+    "TimedText": {
+      "description": "A span of the transcript with the times of the timestamp tokens around it.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "start": {
+          "description": "Seconds from the start of the clip.",
+          "type": "number",
+          "format": "double"
+        },
+        "end": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "start",
+        "end"
+      ]
+    },
+    "SpeechEmbeddings": {
+      "description": "The per-frame speech embeddings of a clip: `frames` rows of `dim` floats, row-major in\n`values` (`frames * dim` of them).",
+      "type": "object",
+      "properties": {
+        "frames": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "dim": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frames",
+        "dim",
+        "values"
+      ]
+    },
+    "LogprobStep": {
+      "type": "object",
+      "properties": {
+        "bytes": {
+          "description": "The token's bytes (a token can be part of a UTF-8 character).",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "text": {
+          "description": "The bytes as text, when they are valid UTF-8.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "logprob": {
+          "type": "number",
+          "format": "float"
+        },
+        "top": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TopLogprob"
+          }
+        },
+        "forced": {
+          "description": "True when the grammar forced this token (no sampling happened).",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "bytes",
+        "logprob"
+      ]
+    },
+    "TopLogprob": {
+      "type": "object",
+      "properties": {
+        "bytes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "logprob": {
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "bytes",
+        "logprob"
+      ]
+    },
+    "Finish": {
+      "type": "string",
+      "enum": [
+        "stop",
+        "length",
+        "error",
+        "cancelled"
+      ]
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "hint": {
+          "description": "What the caller can do about it.",
+          "type": "string"
+        },
+        "details": {
+          "description": "Typed fields of this code, for example `{limit, max, measured}` for `E0206`.",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "hint"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "E0101",
+        "E0102",
+        "E0103",
+        "E0104",
+        "E0203",
+        "E0204",
+        "E0205",
+        "E0206",
+        "E0207",
+        "E0208",
+        "E0209",
+        "E0210",
+        "E0301",
+        "E0302",
+        "E0303",
+        "E0310",
+        "E0312",
+        "E0313",
+        "E0314",
+        "E0315",
+        "E0316",
+        "E0317",
+        "E0318",
+        "E0319",
+        "E0320",
+        "E0321",
+        "E0401",
+        "E0402",
+        "E0403",
+        "E0501",
+        "E0502",
+        "E0503",
+        "E0504",
+        "E0521",
+        "E0601",
+        "E0701",
+        "E0702",
+        "E0703",
+        "E0704",
+        "E0801",
+        "E0802",
+        "E0803",
+        "E0804",
+        "E0901",
+        "E0902"
+      ]
+    },
+    "Meta": {
+      "type": "object",
+      "properties": {
+        "digest": {
+          "description": "Digest of the pack that ran.",
+          "$ref": "#/$defs/Digest"
+        },
+        "timing": {
+          "$ref": "#/$defs/Timing"
+        },
+        "started": {
+          "description": "False only on a response with `finish: \"error\"` whose request failed **before the run\nbegan** (admission, a full queue, a deadline in the queue, an unknown pack, a binder or\ncontext error: the engine was never called). It is the response form of the `error`\nevent, and it is what a blocking HTTP call turns into the status of the code with a bare\n`Error` body (5.8.7). True for every other response, including an error that ends a run\nthat had started (a deadline during prefill or encode, an engine failure); a true value is\nnot written.",
+          "type": "boolean"
+        },
+        "stages": {
+          "description": "The stages of a chained run (12.2.2), in order, each with its own timing; empty for a\nrequest without `then`. `timing` above is their sum (queue and run time of both), with\n`total_ms` from the arrival of the request to its end.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Stage"
+          }
+        },
+        "stream": {
+          "description": "What a stream session did (12.1): present on the `final` of a stream, absent otherwise.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StreamStats"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depth": {
+          "description": "The number of layers the pack ran at, for a pack that declares depths (13.1.2).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "shortlist": {
+          "description": "The tools that reached the prompt when the pack retrieves them (13.3.2), in the order of\nthe request's tool list; absent when retrieval did not run.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortlistEntry"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "digest",
+        "timing"
+      ]
+    },
+    "Timing": {
+      "description": "Where the time went (U3). Times are milliseconds.",
+      "type": "object",
+      "properties": {
+        "load_ms": {
+          "type": "number",
+          "format": "double"
+        },
+        "queue_ms": {
+          "type": "number",
+          "format": "double"
+        },
+        "prefill_ms": {
+          "type": "number",
+          "format": "double"
+        },
+        "prompt_tokens": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "decode_ms": {
+          "type": "number",
+          "format": "double"
+        },
+        "gen_tokens": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "per_token_ms": {
+          "description": "`decode_ms / gen_tokens`, 0 when nothing was generated.",
+          "type": "number",
+          "format": "double"
+        },
+        "total_ms": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "load_ms",
+        "queue_ms",
+        "prefill_ms",
+        "prompt_tokens",
+        "decode_ms",
+        "gen_tokens",
+        "per_token_ms",
+        "total_ms"
+      ]
+    },
+    "Stage": {
+      "description": "One stage of a chained run (12.2.2).",
+      "type": "object",
+      "properties": {
+        "pack": {
+          "description": "The pack the stage ran on.",
+          "type": "string"
+        },
+        "digest": {
+          "description": "Its digest; the zero digest when the stage never reached a pack (an unknown pack).",
+          "$ref": "#/$defs/Digest"
+        },
+        "finish": {
+          "description": "How the stage ended.",
+          "$ref": "#/$defs/Finish"
+        },
+        "timing": {
+          "description": "The stage's own timing (`queue_ms` is its wait in the queue, `total_ms` its arrival to its\nend).",
+          "$ref": "#/$defs/Timing"
+        },
+        "text": {
+          "description": "The text the stage handed to the next one (the first stage only).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error": {
+          "description": "The error the stage ended with, when it did.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pack",
+        "digest",
+        "finish",
+        "timing"
+      ]
+    },
+    "StreamStats": {
+      "description": "What a stream session did (12.1), counted as it ran. The bounded-memory figures are the\nlargest the session ever held: `buffered_samples_peak` never exceeds the window plus the\nlargest chunk plus the pre-roll, however long the stream was.",
+      "type": "object",
+      "properties": {
+        "audio_ms": {
+          "description": "Audio received, in milliseconds.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "bytes": {
+          "description": "Bytes received (a WAV header included).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "passes": {
+          "description": "Passes run over the window (engine runs of the speech stage).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "utterances": {
+          "description": "Utterances ended (by a pause or by the close).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "committed_words": {
+          "description": "Words committed.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "buffered_samples_peak": {
+          "description": "The largest number of samples the session buffered at once.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "window_samples_peak": {
+          "description": "The largest window handed to the speech stage, in samples.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "tail_words_peak": {
+          "description": "The most words the uncommitted tail ever held.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "passes_skipped": {
+          "description": "Passes the pack's silence gate or the stream's voice check saved (windows without voice).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "audio_ms",
+        "bytes",
+        "passes",
+        "utterances",
+        "committed_words",
+        "buffered_samples_peak",
+        "window_samples_peak",
+        "tail_words_peak",
+        "passes_skipped"
+      ]
+    },
+    "ShortlistEntry": {
+      "description": "A tool that tool retrieval kept for the prompt (13.3.2).",
+      "type": "object",
+      "properties": {
+        "index": {
+          "description": "The position of the tool in the request's tool list.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "name"
+      ]
+    },
+    "Event": {
+      "description": "One item of a stream. The `event` field picks the kind.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "ms": {
+              "type": "number",
+              "format": "double"
+            },
+            "event": {
+              "type": "string",
+              "const": "delta"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "text",
+            "ms"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "response": {
+              "$ref": "#/$defs/Response"
+            },
+            "event": {
+              "type": "string",
+              "const": "final"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "response"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "event": {
+              "type": "string",
+              "const": "error"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "error"
+          ]
+        }
+      ]
+    },
+    "StreamOpen": {
+      "description": "Opens a stream session: the request of `stream_open`, `POST /v1/stream` and `latai listen`.\n\nEverything but `pack` is optional. The audio is mono 16-bit PCM at the pack's sample rate\n(no resampling: another rate is `E0319`), pushed as raw samples or as a WAV file whose header\ncomes first. A pass is an `audio` run of the pack on the newest `window_seconds` of the\nutterance, so what a pass says is what the same samples would say offline.",
+      "type": "object",
+      "properties": {
+        "pack": {
+          "description": "The speech pack.",
+          "type": "string"
+        },
+        "format": {
+          "description": "What the pushed bytes are: `pcm16` (raw little-endian samples, the default) or `wav` (a\nheader, then the samples; a data size of 0 or 0xFFFFFFFF in the header means until the\npushes end, any other size is honoured and the bytes after it are ignored).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AudioFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sample_rate": {
+          "description": "The rate of raw `pcm16` samples; the pack's when absent. For `wav` the header says, and a\nvalue here must agree with it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "language": {
+          "description": "Force the spoken language, as for an `audio` input.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prompt": {
+          "description": "Text given to the decoder after the audio of every pass.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prompt_before": {
+          "description": "Text given to the decoder before the audio of every pass.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output": {
+          "description": "Output options of every pass: `keywords`, `keyword_boost`, `max_tokens`, `stop`. A schema,\n`tool_choice` or `logprobs` is refused (`E0315`).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "window_seconds": {
+          "description": "The longest stretch of audio one pass decodes, in seconds: 1 up to the pack's pass\n(`latai.audio.max_seconds`, at most 30, which is also the default). The session never holds\nmore than this plus one chunk and the pre-roll.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "hop_ms": {
+          "description": "Milliseconds of new audio between two passes of an utterance: [`HOP_MS_MIN`] to half the\nwindow (default [`HOP_MS_DEFAULT`], at most half the window). A shorter hop shows words\nsooner and costs more passes; it is at most half the window so that every word is seen by\ntwo passes while it is inside the window. `0`: no pass until the window is full, then every\nhalf window, so an utterance that fits one window is decoded once, at its end, exactly as\nthe same samples are offline (and one that does not fit loses nothing).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "pause_ms": {
+          "description": "Milliseconds of silence that end an utterance ([`PAUSE_MS_MIN`] to [`PAUSE_MS_MAX`],\ndefault [`PAUSE_MS_DEFAULT`]); `0` turns endpointing off, so the stream is one utterance\nfrom its first sample (its committed text then equals the offline transcript of the same\naudio when it fits one window).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "silence_peak": {
+          "description": "The loudest sample (of 32768) that still counts as silence for the voice check, 0 to\n1,024; the pack's `latai.audio.silence_peak` (16 by default) when absent.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max_seconds": {
+          "description": "End the stream (`E0312 stream_seconds`) after this many seconds of audio; at most\n[`STREAM_MAX_SECONDS`], which is also the default.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "deadline_ms": {
+          "description": "The time the whole stream may take from its open, in milliseconds; when it passes the stream\nends with `E0702`. Each pass gets what is left. None: no deadline.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "expect_digest": {
+          "description": "Refuse the stream unless the pack's digest is this.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "then": {
+          "description": "Run this second stage on every utterance's committed text when the utterance ends (12.2.3).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Then"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pack"
+      ]
+    },
+    "StreamEvent": {
+      "description": "One item of a stream session; the `event` field picks the kind. See the module docs for the\nrules every sequence follows.",
+      "oneOf": [
+        {
+          "description": "The uncommitted words so far, replacing the previous `partial`. May be revised.",
+          "type": "object",
+          "properties": {
+            "utterance": {
+              "description": "The utterance (counted from 0) the words belong to.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "text": {
+              "type": "string"
+            },
+            "at_ms": {
+              "description": "The end of the pass that heard it, in milliseconds of audio from the stream's start.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "event": {
+              "type": "string",
+              "const": "partial"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "utterance",
+            "text",
+            "at_ms"
+          ]
+        },
+        {
+          "description": "New committed words. Never revised, never repeated.",
+          "type": "object",
+          "properties": {
+            "utterance": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "text": {
+              "type": "string"
+            },
+            "at_ms": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "event": {
+              "type": "string",
+              "const": "committed"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "utterance",
+            "text",
+            "at_ms"
+          ]
+        },
+        {
+          "description": "An utterance ended; `text` is everything committed in it.",
+          "type": "object",
+          "properties": {
+            "utterance": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "text": {
+              "type": "string"
+            },
+            "start_ms": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "end_ms": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "start_sample": {
+              "description": "The sample range `[start_sample, end_sample)` of the stream the last pass decoded\n(or, for a long utterance, the end of it), so a client can run the same samples offline.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "end_sample": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "event": {
+              "type": "string",
+              "const": "utterance"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "utterance",
+            "text",
+            "start_ms",
+            "end_ms",
+            "start_sample",
+            "end_sample"
+          ]
+        },
+        {
+          "description": "The second stage ran on the text of an utterance (12.2.3). `response` is the second\nstage's response, as a run of that pack on `text` by hand gives it.",
+          "type": "object",
+          "properties": {
+            "utterance": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "text": {
+              "type": "string"
+            },
+            "response": {
+              "$ref": "#/$defs/Response"
+            },
+            "event": {
+              "type": "string",
+              "const": "then"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "utterance",
+            "text",
+            "response"
+          ]
+        },
+        {
+          "description": "The stream ended. The one terminal event of a stream that opened.",
+          "type": "object",
+          "properties": {
+            "response": {
+              "$ref": "#/$defs/Response"
+            },
+            "event": {
+              "type": "string",
+              "const": "final"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "response"
+          ]
+        },
+        {
+          "description": "The stream could not open. The one terminal event of a stream that never ran.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "event": {
+              "type": "string",
+              "const": "error"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "event",
+            "error"
+          ]
+        }
+      ]
+    },
+    "Manifest": {
+      "description": "The typed form of the keys, filled from a pack's metadata by 3.2.",
+      "type": "object",
+      "properties": {
+        "io": {
+          "$ref": "#/$defs/Io"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits",
+          "default": {
+            "kv_formula": {
+              "layers": [],
+              "state": []
+            }
+          }
+        },
+        "resources": {
+          "$ref": "#/$defs/Resources",
+          "default": {}
+        },
+        "load": {
+          "description": "How the weights are loaded (`latai.load.*`, 14.2.2).",
+          "$ref": "#/$defs/Load"
+        },
+        "sampler": {
+          "$ref": "#/$defs/Sampler",
+          "default": "greedy"
+        },
+        "selftest": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SelfTestRecord"
+          }
+        },
+        "audio": {
+          "description": "The audio front end and projector of a speech pack (`latai.audio.*`, 10.3.1).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Audio"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "vision": {
+          "description": "The images and projector of a vision pack (`latai.vision.*`, 15.3.1).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Vision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depth": {
+          "description": "The depths a pack runs at (`latai.depth.*`, 13.1.2); absent: the pack runs at its one depth.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DepthSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tools": {
+          "description": "Tool retrieval (`latai.tools.*`, 13.3.2); absent: every declared tool is placed in the prompt.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolsSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "io"
+      ]
+    },
+    "Io": {
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "$ref": "#/$defs/InputKind"
+        },
+        "record_schema": true,
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Segment"
+          }
+        },
+        "pooling": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pooling"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output": {
+          "$ref": "#/$defs/OutputSpec"
+        },
+        "confidence": {
+          "description": "A learned confidence head over the decoder's final hidden state (13.2.1).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Confidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "inputs",
+        "output"
+      ]
+    },
+    "InputKind": {
+      "description": "`text`, `messages`, `record` or the kind of a plug-in.",
+      "type": "string"
+    },
+    "Segment": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "template": {
+          "type": "string"
+        },
+        "max_len": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "template",
+        "max_len"
+      ]
+    },
+    "Pooling": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "mean",
+            "cls",
+            "none"
+          ]
+        },
+        {
+          "description": "The state of the last token (13.2.2): a decoder's pooling for embeddings.",
+          "type": "string",
+          "const": "last"
+        }
+      ]
+    },
+    "OutputSpec": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/OutputKind"
+        },
+        "processor": {
+          "description": "`heads`, `vector` or a plug-in's name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "wrap": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Wrap"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "heads": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Head"
+          }
+        },
+        "activation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "logit_mean": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "logit_sigma": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ]
+    },
+    "OutputKind": {
+      "type": "string",
+      "enum": [
+        "text",
+        "json",
+        "choices",
+        "vector"
+      ]
+    },
+    "Wrap": {
+      "description": "Single-token markers; JSON is forced only between them (4.4).",
+      "type": "object",
+      "properties": {
+        "open": {
+          "type": "string"
+        },
+        "close": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "open",
+        "close"
+      ]
+    },
+    "Head": {
+      "description": "A declarative head: int8 weights with per-row scales, applied to the pooled vector (4.7).",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/HeadType"
+        },
+        "rows": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "cols": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "weights": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int8",
+            "minimum": -128,
+            "maximum": 127
+          }
+        },
+        "scales": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          }
+        },
+        "bias": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          }
+        },
+        "pair": {
+          "description": "The two segment names a bilinear head pairs.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "rows",
+        "cols",
+        "weights",
+        "scales"
+      ]
+    },
+    "HeadType": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "bilinear"
+      ]
+    },
+    "Confidence": {
+      "description": "`latai.io.confidence.*` (13.2.1): one linear head with int8 weights and one per-tensor scale,\napplied to the final hidden state (after the last norm) of the last prompt token; the logit is\ncalibrated like a head's (`(logit - mean) / sigma`) and passed through a sigmoid. The result is\nthe `confidence` of the response.",
+      "type": "object",
+      "properties": {
+        "cols": {
+          "description": "Inputs of the head; equals the model's embedding width.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "weights": {
+          "description": "`cols` values.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int8",
+            "minimum": -128,
+            "maximum": 127
+          }
+        },
+        "scale": {
+          "description": "`w[c] = float32(weights[c]) * scale`.",
+          "type": "number",
+          "format": "float"
+        },
+        "bias": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "logit_mean": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "logit_sigma": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "cols",
+        "weights",
+        "scale"
+      ]
+    },
+    "Limits": {
+      "type": "object",
+      "properties": {
+        "kv_formula": {
+          "$ref": "#/$defs/KvFormulaSpec",
+          "default": {
+            "layers": [],
+            "state": []
+          }
+        },
+        "max_new_tokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max_tools": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max_tools_declared": {
+          "description": "The most tools a request may declare (at most [`TOOLS_DECLARED_MAX`]); `max_tools` above is\nhow many reach the prompt.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "KvFormulaSpec": {
+      "type": "object",
+      "properties": {
+        "layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KvLayerSpec"
+          },
+          "default": []
+        },
+        "state": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KvStateSpec"
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "KvLayerSpec": {
+      "description": "Attention layers that share one shape.",
+      "type": "object",
+      "properties": {
+        "count": {
+          "description": "How many layers have this shape.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "window": {
+          "description": "Sliding-window length in positions, if the layer keeps only the last `window`.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "k": {
+          "description": "Key bytes per position of one layer.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "v": {
+          "description": "Value bytes per position of one layer.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "scales": {
+          "description": "Scale bytes per position of one layer (0 for unquantised KV).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "k",
+        "v"
+      ]
+    },
+    "KvStateSpec": {
+      "description": "Other per-position state (for example hashed n-gram memory) that grows with the context.",
+      "type": "object",
+      "properties": {
+        "count": {
+          "description": "How many sites have this shape.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "window": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "bytes": {
+          "description": "State bytes per position of one site.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "bytes"
+      ]
+    },
+    "Resources": {
+      "type": "object",
+      "properties": {
+        "rss_max": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "Load": {
+      "description": "`latai.load.*` (14.2.2): how the engine gets the weights into memory.",
+      "type": "object",
+      "properties": {
+        "mmap": {
+          "description": "`latai.load.mmap`: map the pack's file instead of reading it into the process's own\nbuffers. The pages are shared with the page cache and the OS may drop them under memory\npressure, so the first request after a cold start is faster and the resident set smaller\nat the price of page faults while the pack runs. Weights are then **not** repacked for the\nCPU (a repacked copy would sit beside the mapping as a second one). It changes the\narithmetic order of some kernels, so it is part of the `selftest.key` when on.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Sampler": {
+      "description": "Greedy is the only sampler in v1 (proposed).",
+      "type": "string",
+      "enum": [
+        "greedy"
+      ]
+    },
+    "SelfTestRecord": {
+      "description": "A request and the answer a pack must give, checked at stage and at every start (3.5, 8.5).",
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "request": true,
+        "expected": true
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "request",
+        "expected"
+      ]
+    },
+    "Audio": {
+      "description": "`latai.audio.*`: what the speech pack's audio is and where its projector is pinned. Present\nonly on a speech pack, and then whole (every key but none of them guessed).",
+      "type": "object",
+      "properties": {
+        "sample_rate": {
+          "description": "The sample rate of the PCM the pack takes, in Hz; stage checks it against the projector.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "n_mel": {
+          "description": "Mel bins of the front end; stage checks it against the projector's header.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "hop": {
+          "description": "The hop of the front end, in samples.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "window": {
+          "description": "The analysis window of the front end, in samples.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max_seconds": {
+          "description": "The longest clip one run takes, in seconds (1 to 30, a single pass).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "outputs": {
+          "description": "What the pack's text output carries (10.1.1): at least one, each once.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AudioOutput"
+          }
+        },
+        "projector": {
+          "$ref": "#/$defs/ProjectorPin"
+        },
+        "silence_peak": {
+          "description": "A window of audio whose samples are all within this of zero (of 32768) is silent and is not\ndecoded (0 to 1,024; absent: 16, about -66 dBFS). The one optional `latai.audio.*` key.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "sample_rate",
+        "n_mel",
+        "hop",
+        "window",
+        "max_seconds",
+        "outputs",
+        "projector"
+      ]
+    },
+    "ProjectorPin": {
+      "description": "The projector GGUF a speech pack needs, pinned by the decoder's signed manifest: the one\nsignature over the decoder covers these, so the projector needs none of its own.",
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "sha256",
+        "bytes"
+      ]
+    },
+    "Vision": {
+      "description": "`latai.vision.*` (15.3.1): what images the vision pack takes and where its projector is pinned.\nPresent only on a vision pack. `max_pixels` and the projector are required; the token bounds\ngo to `mtmd` as they are (for some projector types they change how an image is cut, not only a\nbound) and are absent for the projector's own; `max_strips` absent is 1 (no strips).",
+      "type": "object",
+      "properties": {
+        "max_pixels": {
+          "description": "The most pixels one image may have (1 to [`VISION_MAX_PIXELS_LIMIT`]); a larger image is\nscaled down by the runtime to fit before the projector sees it.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "image_min_tokens": {
+          "description": "`mtmd`'s `image_min_tokens` for the projector (1 to [`VISION_IMAGE_TOKENS_LIMIT`]).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "image_max_tokens": {
+          "description": "`mtmd`'s `image_max_tokens` for the projector (1 to [`VISION_IMAGE_TOKENS_LIMIT`]).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max_strips": {
+          "description": "The most horizontal strips a tall image is cut into, each run on its own (1 to\n[`VISION_MAX_STRIPS_LIMIT`]; absent: 1).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "projector": {
+          "$ref": "#/$defs/ProjectorPin"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "max_pixels",
+        "projector"
+      ]
+    },
+    "DepthSpec": {
+      "description": "`latai.depth.*` (13.1.2): the numbers of layers a model whose early exits are meaningful may be\nloaded with. Stage slices one GGUF per depth below the file's `block_count`, measures each,\nand the served depth is one of them.",
+      "type": "object",
+      "properties": {
+        "allowed": {
+          "description": "The allowed numbers of layers, ascending, each once, at most [`DEPTH_MAX_DECLARED`].",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "default": {
+          "description": "The depth served when the config names none; one of `allowed`.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "allowed",
+        "default"
+      ]
+    },
+    "ToolsSpec": {
+      "description": "`latai.tools.*` (13.3.2): retrieval of the tools that reach the prompt.",
+      "type": "object",
+      "properties": {
+        "retrieval": {
+          "description": "Embed the declared tools and the query and place only the best `top_k` in the prompt.",
+          "type": "boolean"
+        },
+        "embedder": {
+          "description": "The name of the encoder pack that embeds them (a `vector` pack that takes `text`).",
+          "type": "string"
+        },
+        "top_k": {
+          "description": "Tools kept per turn: 1 to [`TOOLS_PROMPT_MAX`]; absent means [`TOOLS_PROMPT_MAX`].",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "retrieval",
+        "embedder"
+      ]
+    },
+    "StageReceipt": {
+      "type": "object",
+      "properties": {
+        "digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "name": {
+          "type": "string"
+        },
+        "serial": {
+          "$ref": "#/$defs/Serial"
+        },
+        "channel": {
+          "$ref": "#/$defs/Channel"
+        },
+        "manifest": {
+          "$ref": "#/$defs/Manifest"
+        },
+        "measured": {
+          "$ref": "#/$defs/Measured"
+        },
+        "n_ctx": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "selftest": {
+          "$ref": "#/$defs/SelfTestOutcome"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "digest",
+        "name",
+        "serial",
+        "channel",
+        "manifest",
+        "measured",
+        "n_ctx",
+        "selftest"
+      ]
+    },
+    "Serial": {
+      "description": "The version number of a signed pack; a serial below the floor is a downgrade.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "Channel": {
+      "description": "A release channel name. The charset is what the signed trusted comment\n(`latai sha256=.. serial=.. channel=<name> kind=..`) can carry without quoting (proposed). It\nbecomes a folder name (the serial floor), so `.`, `..` and any name ending with a dot (which\nWindows drops) are refused; the charset already leaves out path separators.",
+      "type": "string"
+    },
+    "Measured": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "file_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "n_ctx_train": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "n_embd": {
+          "description": "The embedding width (a declarative head's `cols` must equal it, 3.5.6).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "n_ctx": {
+          "description": "The context latai runs the pack with (the context rule of README section 2).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "kv_bytes_per_pos": {
+          "description": "KV bytes per position at the full context, from a real context.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "kv_bytes": {
+          "description": "Total KV and per-position state bytes at `n_ctx`.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "encoder_only": {
+          "description": "The model has no KV cache or recurrent state (BERT): it can `encode` and cannot\n`generate`. Every other model is a decoder that can only `generate`. `stage` refuses a\npack whose output kind needs the other one.",
+          "type": "boolean"
+        },
+        "load_ms": {
+          "type": "number",
+          "format": "double"
+        },
+        "audio": {
+          "description": "The audio projector of a speech pack (10.3.2); absent for every other pack. `params` and\n`file_bytes` above stay the decoder's: the ceiling adds these to them.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AudioMeasured"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "image": {
+          "description": "The vision projector of a vision pack (15.3.2); absent for every other pack. A pack with\naudio and vision pins one projector: the ceiling counts it once.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageMeasured"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depths": {
+          "description": "One entry per depth a pack declares (`latai.depth.allowed`, 13.1.2), measured on a model\nloaded with that many layers; empty for a pack without depths. The fields above are the\nwhole file's (the signed pack, all its layers).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DepthMeasured"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "params",
+        "file_bytes",
+        "n_ctx_train",
+        "n_embd",
+        "n_ctx",
+        "kv_bytes_per_pos",
+        "kv_bytes",
+        "encoder_only",
+        "load_ms"
+      ]
+    },
+    "AudioMeasured": {
+      "description": "What `stage` measured of a speech pack's projector.",
+      "type": "object",
+      "properties": {
+        "sample_rate": {
+          "description": "The sample rate the projector's front end expects, in Hz.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "n_embd": {
+          "description": "The width of an audio row (the decoder's input embedding width).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "positions_max": {
+          "description": "Decoder positions that `latai.audio.max_seconds` of audio take, markers included.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "projector_params": {
+          "description": "Parameters of the projector file (the sum of its tensors' elements, from its header).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "projector_bytes": {
+          "description": "Bytes of the projector file.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "sample_rate",
+        "n_embd",
+        "positions_max",
+        "projector_params",
+        "projector_bytes"
+      ]
+    },
+    "ImageMeasured": {
+      "description": "What `stage` measured of a vision pack's projector (15.3.2).",
+      "type": "object",
+      "properties": {
+        "n_embd": {
+          "description": "The width of an image row (the decoder's input embedding width).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "positions_max": {
+          "description": "The most decoder positions one image of at most `latai.vision.max_pixels` took among the\nprobe shapes (a square, the widest and tallest the engine takes, 4:3 and 3:4), markers\nincluded: every probe was encoded for real in the stage child.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "projector_params": {
+          "description": "Parameters of the projector file (the sum of its tensors' elements, from its header).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "projector_bytes": {
+          "description": "Bytes of the projector file.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "n_embd",
+        "positions_max",
+        "projector_params",
+        "projector_bytes"
+      ]
+    },
+    "DepthMeasured": {
+      "description": "What `stage` measured of one depth of a pack (13.1.2): the model sliced to its first `depth`\nlayers. The params row counts these `params`; the file row counts the signed file whole (the\nslice is derived data on top of it).",
+      "type": "object",
+      "properties": {
+        "depth": {
+          "description": "The number of layers.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "params": {
+          "description": "Parameters of the model at this depth (the sum over the tensors of the slice).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "file_bytes": {
+          "description": "Bytes of the file that is loaded at this depth: the slice's, or the pack's own file at the\nfull depth.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "n_ctx": {
+          "description": "The context latai runs the pack with at this depth (the context rule on the cut formula).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "kv_bytes_per_pos": {
+          "description": "KV bytes per position at this depth, from a real context.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "kv_bytes": {
+          "description": "Total KV and per-position state bytes at `n_ctx`.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "slice_sha256": {
+          "description": "The sha256 of the derived slice file (`depth-<n>.gguf` in the store), checked again each\ntime the pack is opened; absent at the full depth, where the pack's own file is loaded.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "load_ms": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "depth",
+        "params",
+        "file_bytes",
+        "n_ctx",
+        "kv_bytes_per_pos",
+        "kv_bytes",
+        "load_ms"
+      ]
+    },
+    "SelfTestOutcome": {
+      "description": "What the self-test did at stage.",
+      "oneOf": [
+        {
+          "description": "The pack carries no records.",
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "none"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "records": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "status": {
+              "type": "string",
+              "const": "passed"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "records"
+          ]
+        }
+      ]
+    },
+    "PackInfo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "arch": {
+          "type": "string"
+        },
+        "params": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "file_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "n_ctx_train": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "n_ctx": {
+          "description": "The context the pack would run at, or `None` when the context rule refuses it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "ceiling_rows": {
+          "description": "Every ceiling row the header breaks (an empty list is a pack inside the ceiling).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExceededRow"
+          }
+        },
+        "manifest": {
+          "$ref": "#/$defs/Manifest"
+        },
+        "tensors": {
+          "$ref": "#/$defs/TensorTotals"
+        },
+        "inputs": {
+          "$ref": "#/$defs/Needs"
+        },
+        "processor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Needs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signature": {
+          "description": "The `.minisig` next to the file, as claimed.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SignatureClaim"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verified": {
+          "description": "True only for a pack read from the store: `stage` checked its digest and signature when it\nstored it. `inspect` does not hash the stored file again (that is done when the pack is\nopened for a run), so this says nothing about the file's bytes today.",
+          "type": "boolean"
+        },
+        "measured": {
+          "description": "What `stage` measured, for a stored pack.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Measured"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "projector": {
+          "description": "A speech pack's projector, from its header (10.3.1): beside the file (`<name>.mmproj.gguf`)\nor in the store. Absent for every other pack, and when the file beside it is missing.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProjectorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "arch",
+        "params",
+        "file_bytes",
+        "n_ctx_train",
+        "ceiling_rows",
+        "manifest",
+        "tensors",
+        "inputs",
+        "verified"
+      ]
+    },
+    "ExceededRow": {
+      "description": "A ceiling row the pack breaks: the row's name (`params`, `file`, ...), its maximum and the value.",
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "string"
+        },
+        "max": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "measured": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "limit",
+        "max",
+        "measured"
+      ]
+    },
+    "TensorTotals": {
+      "description": "The tensor table, summed up.",
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "data_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "data_bytes"
+      ]
+    },
+    "Needs": {
+      "description": "An input kind or an output processor a pack names, and whether this process has it.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "availability": {
+          "$ref": "#/$defs/Availability"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "availability"
+      ]
+    },
+    "Availability": {
+      "description": "Whether the extension a pack needs is part of latai, was added by a plug-in, or is missing.",
+      "type": "string",
+      "enum": [
+        "builtin",
+        "registered",
+        "missing"
+      ]
+    },
+    "SignatureClaim": {
+      "description": "What a `.minisig` claims. Until the whole file is hashed and checked (stage), none of it is\nvouched for.",
+      "type": "object",
+      "properties": {
+        "key_id": {
+          "type": "string"
+        },
+        "serial": {
+          "$ref": "#/$defs/Serial"
+        },
+        "channel": {
+          "$ref": "#/$defs/Channel"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key_id",
+        "serial",
+        "channel",
+        "sha256"
+      ]
+    },
+    "ProjectorInfo": {
+      "description": "What `inspect` reads from a speech pack's projector header, without hashing it: `sha256` is the\npin the pack's manifest claims, which `stage` checks.",
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "file_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "arch": {
+          "description": "The projector's architecture (`clip`) and, if it names one, its projector type.",
+          "type": "string"
+        },
+        "projector_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "n_mel": {
+          "description": "Mel bins of an audio encoder; absent for a projector without one.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "vision": {
+          "description": "The projector has a vision encoder (15.3.1); absent means false.",
+          "type": "boolean"
+        },
+        "params": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "tensors": {
+          "$ref": "#/$defs/TensorTotals"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "sha256",
+        "file_bytes",
+        "arch",
+        "params",
+        "tensors"
+      ]
+    },
+    "RuntimeInfo": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "The version of latai.",
+          "type": "string"
+        },
+        "budget": {
+          "$ref": "#/$defs/BudgetReport"
+        },
+        "variant": {
+          "description": "The CPU variant or backend the engine uses.",
+          "type": "string"
+        },
+        "data_dir": {
+          "description": "The resolved data directory.",
+          "type": "string"
+        },
+        "packs": {
+          "description": "Sorted by name.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LoadedPack"
+          }
+        },
+        "plugins": {
+          "description": "Names of the enabled plug-ins.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "queue": {
+          "description": "The run queue (`GET /readyz` is not ready while it is full).",
+          "$ref": "#/$defs/QueueReport",
+          "default": {
+            "queued": 0,
+            "capacity": 0
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "budget",
+        "variant",
+        "data_dir",
+        "packs",
+        "plugins"
+      ]
+    },
+    "BudgetReport": {
+      "description": "How the thread budget was found (5.6.3): what std reports, what sysfs adds, and the result.",
+      "type": "object",
+      "properties": {
+        "online": {
+          "description": "CPUs listed online by the OS, where it says (Linux sysfs).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "std_value": {
+          "description": "`std::thread::available_parallelism`, which applies affinity and the cgroup quota on Linux.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "budget": {
+          "description": "The threads the owner thread's run gets: `std_value` capped by `online`, at least 1.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "std_value",
+        "budget"
+      ]
+    },
+    "LoadedPack": {
+      "description": "A pack the runtime serves.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "in_flight": {
+          "description": "Runs that hold this pack right now, queued or running.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "digest",
+        "in_flight"
+      ]
+    },
+    "QueueReport": {
+      "description": "The run queue right now: the jobs waiting and the most it holds. A new request that finds\n`queued >= capacity` is refused with `E0701`. `{0, 0}` (what an older runtime says, by\ndefault) means \"not reported\".",
+      "type": "object",
+      "properties": {
+        "queued": {
+          "description": "Jobs waiting for the engine (not counting the one that runs).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "capacity": {
+          "description": "`[runtime] queue_capacity`.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "queued",
+        "capacity"
+      ]
+    },
+    "Status": {
+      "description": "`status` of one pack name: read from local state only, never from the network.",
+      "type": "object",
+      "properties": {
+        "pack": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/StatusState"
+        },
+        "reason": {
+          "description": "The code behind `needs-update` or `unsupported-device` (`E0205`, `E0208`, `E0521`, ...).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "active": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActiveVersion"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pull": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PullProgress"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depth": {
+          "description": "The number of layers the pack is served at, for a pack that declares depths (13.1.2): the\n`[depth]` entry of `latai.toml`, else the pack's default.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pack",
+        "state"
+      ]
+    },
+    "StatusState": {
+      "description": "The four answers of `status` (README section 2). Precedence, when several apply: downloading,\nunsupported-device, needs-update, available.",
+      "type": "string",
+      "enum": [
+        "available",
+        "downloading",
+        "needs-update",
+        "unsupported-device"
+      ]
+    },
+    "ActiveVersion": {
+      "description": "The version that serves.",
+      "type": "object",
+      "properties": {
+        "digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "serial": {
+          "$ref": "#/$defs/Serial"
+        },
+        "channel": {
+          "$ref": "#/$defs/Channel"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "digest",
+        "serial",
+        "channel"
+      ]
+    },
+    "PullProgress": {
+      "description": "How far a pull is.",
+      "type": "object",
+      "properties": {
+        "bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "total": {
+          "description": "Absent when the server did not say.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "bytes"
+      ]
+    },
+    "PackVersion": {
+      "description": "One installed version, as `list` shows it. It is read from receipts and `state.json` alone.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "serial": {
+          "$ref": "#/$defs/Serial"
+        },
+        "channel": {
+          "$ref": "#/$defs/Channel"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "state": {
+          "$ref": "#/$defs/VersionState"
+        },
+        "code": {
+          "description": "The code that rejected the version, when `state` is `rejected`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pin": {
+          "description": "The pin of the pack's name: a sha256 or `channel:<name>`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "serial",
+        "channel",
+        "sha256",
+        "state"
+      ]
+    },
+    "VersionState": {
+      "description": "Where one installed version is in its life (8.4). A version that failed has the code that\nstopped it next to this state, in `code`.",
+      "type": "string",
+      "enum": [
+        "staged",
+        "verified",
+        "self_tested",
+        "active",
+        "retained",
+        "rejected"
+      ]
+    }
+  }
+}

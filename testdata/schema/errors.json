@@ -1,0 +1,1356 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "E01",
+      "name": "pack"
+    },
+    {
+      "id": "E02",
+      "name": "compat"
+    },
+    {
+      "id": "E03",
+      "name": "request"
+    },
+    {
+      "id": "E04",
+      "name": "trust"
+    },
+    {
+      "id": "E05",
+      "name": "engine"
+    },
+    {
+      "id": "E06",
+      "name": "access"
+    },
+    {
+      "id": "E07",
+      "name": "busy"
+    },
+    {
+      "id": "E08",
+      "name": "lifecycle"
+    },
+    {
+      "id": "E09",
+      "name": "internal"
+    }
+  ],
+  "errors": [
+    {
+      "code": "E0101",
+      "name": "PackMalformed",
+      "category": "E01",
+      "retryable": false,
+      "hint": "The model file is damaged or is not a valid GGUF. Download it again.",
+      "fields": [
+        {
+          "name": "offset",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "offset"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0102",
+      "name": "SignatureInvalid",
+      "category": "E01",
+      "retryable": false,
+      "hint": "The pack or its signature changed after signing. Fetch both again; if it persists the pack is not from a trusted source.",
+      "fields": [
+        {
+          "name": "path",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0103",
+      "name": "StoreIo",
+      "category": "E01",
+      "retryable": false,
+      "hint": "The pack store could not be read or written. Check the data directory exists, has space and is writable.",
+      "fields": [
+        {
+          "name": "path",
+          "type": "string"
+        },
+        {
+          "name": "op",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "op"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0104",
+      "name": "StageChildFailed",
+      "category": "E01",
+      "retryable": false,
+      "hint": "The isolated process that checks a new pack crashed or timed out. The pack is rejected; try another file.",
+      "fields": [
+        {
+          "name": "cause",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cause"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0203",
+      "name": "PluginAbiMismatch",
+      "category": "E02",
+      "retryable": false,
+      "hint": "The plug-in was built for another interface version. Rebuild it against the installed latai-plugin crate.",
+      "fields": [
+        {
+          "name": "plugin",
+          "type": "string"
+        },
+        {
+          "name": "abi",
+          "type": "u64"
+        },
+        {
+          "name": "host",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "plugin": {
+            "type": "string"
+          },
+          "abi": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "host": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "plugin",
+          "abi",
+          "host"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0204",
+      "name": "ManifestInvalid",
+      "category": "E02",
+      "retryable": false,
+      "hint": "A latai.* key in the pack is unknown, missing or malformed. Fix the pack with the pack tool.",
+      "fields": [
+        {
+          "name": "key",
+          "type": "string"
+        },
+        {
+          "name": "rule",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "rule"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0205",
+      "name": "PluginMissing",
+      "category": "E02",
+      "retryable": false,
+      "hint": "The pack needs a plug-in that is not installed. Install the plug-in for that input kind.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0206",
+      "name": "CeilingExceeded",
+      "category": "E02",
+      "retryable": false,
+      "hint": "The model is larger than latai runs. Use a model inside the limit.",
+      "fields": [
+        {
+          "name": "limit",
+          "type": "string"
+        },
+        {
+          "name": "max",
+          "type": "u64"
+        },
+        {
+          "name": "measured",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "measured": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "limit",
+          "max",
+          "measured"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0207",
+      "name": "SelfTestFailed",
+      "category": "E02",
+      "retryable": false,
+      "hint": "The pack did not reproduce its own recorded answers. The pack or its conversion is faulty.",
+      "fields": [
+        {
+          "name": "record",
+          "type": "u64"
+        },
+        {
+          "name": "kind",
+          "type": "string"
+        },
+        {
+          "name": "detail",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "record": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record",
+          "kind",
+          "detail"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0208",
+      "name": "SelfTestNoKey",
+      "category": "E02",
+      "retryable": false,
+      "hint": "The pack has self-test records but none matches this build. Re-record them with the pack tool.",
+      "fields": [
+        {
+          "name": "host_key",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "host_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_key"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0209",
+      "name": "KvFormulaMismatch",
+      "category": "E02",
+      "retryable": false,
+      "hint": "The pack's KV formula disagrees with the measured memory. Fix latai.limits.kv_formula.",
+      "fields": [
+        {
+          "name": "measured",
+          "type": "u64"
+        },
+        {
+          "name": "formula",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "measured": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "formula": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "measured",
+          "formula"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0210",
+      "name": "PinMismatch",
+      "category": "E02",
+      "retryable": false,
+      "hint": "The installed pack is not the pinned version. Install the pinned pack or change the pin.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "pinned",
+          "type": "string"
+        },
+        {
+          "name": "got",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "string"
+          },
+          "got": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "pinned",
+          "got"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0301",
+      "name": "BadRequest",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The request is not valid JSON of the right shape. See the message and the path for the first problem.",
+      "fields": [
+        {
+          "name": "path",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0302",
+      "name": "NullArgument",
+      "category": "E03",
+      "retryable": false,
+      "hint": "A required pointer argument was null. Pass a valid pointer.",
+      "fields": [
+        {
+          "name": "arg",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "arg": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "arg"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0303",
+      "name": "Reentrant",
+      "category": "E03",
+      "retryable": false,
+      "hint": "A callback called back into latai on the same run. Call latai from another thread or after the callback returns.",
+      "fields": [],
+      "details": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0310",
+      "name": "SchemaUnsupported",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The JSON Schema uses a feature the constrained decoder does not support. Simplify the schema.",
+      "fields": [
+        {
+          "name": "path",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0312",
+      "name": "RequestLimit",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The request is over a limit. Lower the value to the stated maximum.",
+      "fields": [
+        {
+          "name": "limit",
+          "type": "string"
+        },
+        {
+          "name": "max",
+          "type": "u64"
+        },
+        {
+          "name": "measured",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "measured": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "limit",
+          "max",
+          "measured"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0313",
+      "name": "GrammarFailure",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The grammar engine failed while constraining the output. Report it with the request.",
+      "fields": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0314",
+      "name": "TemplateError",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The chat template failed to render this input. Check the messages and tools, or use another template.",
+      "fields": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0315",
+      "name": "InputInvalid",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The inputs do not fit what the pack accepts. Check the field named in the path.",
+      "fields": [
+        {
+          "name": "path",
+          "type": "string"
+        },
+        {
+          "name": "expected",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "expected": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "expected"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0316",
+      "name": "UnknownPack",
+      "category": "E03",
+      "retryable": false,
+      "hint": "No pack with that name is loaded. List packs, or install and activate it first.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0317",
+      "name": "DigestMismatch",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The loaded pack is not the one the request expected. Update expect_digest or the pack.",
+      "fields": [
+        {
+          "name": "expected",
+          "type": "string"
+        },
+        {
+          "name": "loaded",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "string"
+          },
+          "loaded": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected",
+          "loaded"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0318",
+      "name": "AudioInvalid",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The audio could not be read. Send base64 of a 16-bit PCM mono WAV file, or raw 16-bit little-endian mono PCM with format pcm16; see docs/request.md.",
+      "fields": [
+        {
+          "name": "field",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0319",
+      "name": "AudioRateMismatch",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The audio is not at the sample rate the pack expects, and latai does not resample. Convert the audio to the pack's rate and send it again.",
+      "fields": [
+        {
+          "name": "expected",
+          "type": "u64"
+        },
+        {
+          "name": "got",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "got": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "expected",
+          "got"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0320",
+      "name": "StreamState",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The stream has already ended (closed, cancelled, failed or past a cap), so it takes no more audio. Open a new stream.",
+      "fields": [
+        {
+          "name": "state",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0321",
+      "name": "ImageInvalid",
+      "category": "E03",
+      "retryable": false,
+      "hint": "The image could not be read. Send base64 of a PNG or JPEG file, or raw 8-bit RGB with format rgb8 and its width and height; see docs/request.md.",
+      "fields": [
+        {
+          "name": "field",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0401",
+      "name": "UntrustedKey",
+      "category": "E04",
+      "retryable": false,
+      "hint": "The signing key is not trusted. Add its public key to the trusted list, if you trust the publisher.",
+      "fields": [
+        {
+          "name": "key_id",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "key_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0402",
+      "name": "SerialBelowFloor",
+      "category": "E04",
+      "retryable": false,
+      "hint": "The pack is older than the newest one seen. Downgrades are refused; roll back with the rollback command instead.",
+      "fields": [
+        {
+          "name": "serial",
+          "type": "u64"
+        },
+        {
+          "name": "floor",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "serial": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "floor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "serial",
+          "floor"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0403",
+      "name": "ChannelMismatch",
+      "category": "E04",
+      "retryable": false,
+      "hint": "The pack is from a channel this install does not accept. Change the accepted channels or pick another pack.",
+      "fields": [
+        {
+          "name": "expected",
+          "type": "string"
+        },
+        {
+          "name": "got",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "string"
+          },
+          "got": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected",
+          "got"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0501",
+      "name": "EngineLoadFailed",
+      "category": "E05",
+      "retryable": false,
+      "hint": "The engine could not load the model. Check the file and that this machine can run it.",
+      "fields": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0502",
+      "name": "ContextCreateFailed",
+      "category": "E05",
+      "retryable": false,
+      "hint": "The engine could not create a context, usually for lack of memory. Free memory or use a smaller model.",
+      "fields": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0503",
+      "name": "DecodeFailed",
+      "category": "E05",
+      "retryable": true,
+      "hint": "The engine failed while generating. Retry; if it persists the pack is faulty.",
+      "fields": [
+        {
+          "name": "status",
+          "type": "i64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0504",
+      "name": "EncodeFailed",
+      "category": "E05",
+      "retryable": true,
+      "hint": "The engine failed while encoding the input. Retry; if it persists the pack is faulty.",
+      "fields": [
+        {
+          "name": "status",
+          "type": "i64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0521",
+      "name": "EngineUnavailable",
+      "category": "E05",
+      "retryable": false,
+      "hint": "No engine build runs on this platform. Use a supported platform.",
+      "fields": [
+        {
+          "name": "platform",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "platform": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0601",
+      "name": "AccessDenied",
+      "category": "E06",
+      "retryable": false,
+      "hint": "This action needs administrator rights. Run it as an administrator.",
+      "fields": [
+        {
+          "name": "principal",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "principal": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0701",
+      "name": "Busy",
+      "category": "E07",
+      "retryable": true,
+      "hint": "The request queue is full. Retry after the stated delay.",
+      "fields": [
+        {
+          "name": "retry_after_ms",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "retry_after_ms": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "retry_after_ms"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0702",
+      "name": "DeadlineExceeded",
+      "category": "E07",
+      "retryable": false,
+      "hint": "The request ran out of time, in the queue or while running. Raise deadline_ms or send less.",
+      "fields": [
+        {
+          "name": "queue_ms",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "queue_ms": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "queue_ms"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0703",
+      "name": "ServeRunning",
+      "category": "E07",
+      "retryable": false,
+      "hint": "A serve process already runs for this data directory. Stop it first or use another directory.",
+      "fields": [
+        {
+          "name": "path",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0704",
+      "name": "LifecycleBusy",
+      "category": "E07",
+      "retryable": true,
+      "hint": "A pack swap or rollback is in progress. Retry in a moment.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "retry_after_ms",
+          "type": "u64"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "retry_after_ms": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "retry_after_ms"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0801",
+      "name": "PullFailed",
+      "category": "E08",
+      "retryable": true,
+      "hint": "Downloading the pack failed. Check the network and the source, then retry.",
+      "fields": [
+        {
+          "name": "url",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "u64"
+        },
+        {
+          "name": "cause",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cause": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "status",
+          "cause"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0802",
+      "name": "PullDeferred",
+      "category": "E08",
+      "retryable": true,
+      "hint": "A download rule (Wi-Fi only, charging only) blocks the pull now. Retry when the rule allows, or change the rule.",
+      "fields": [
+        {
+          "name": "rule",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0803",
+      "name": "NoRollbackTarget",
+      "category": "E08",
+      "retryable": false,
+      "hint": "There is no earlier version to roll back to. Install one first.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0804",
+      "name": "StageInterrupted",
+      "category": "E08",
+      "retryable": true,
+      "hint": "Staging was interrupted. Run the stage again.",
+      "fields": [],
+      "details": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0901",
+      "name": "Internal",
+      "category": "E09",
+      "retryable": false,
+      "hint": "An internal error. Report it with the request id and the log.",
+      "fields": [
+        {
+          "name": "detail",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "code": "E0902",
+      "name": "PluginFailed",
+      "category": "E09",
+      "retryable": false,
+      "hint": "A plug-in returned an error. Check the plug-in and report it to its author.",
+      "fields": [
+        {
+          "name": "plugin",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ],
+      "details": {
+        "type": "object",
+        "properties": {
+          "plugin": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plugin",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
