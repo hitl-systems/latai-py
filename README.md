@@ -1,15 +1,18 @@
 # latai (Python)
 
 Python binding of the latai C ABI: run packs, stream tokens, stream audio, manage packs. Pure Python
-(`ctypes`), Python 3.9 or later, no runtime dependencies, typed (`py.typed`). Guide:
-[docs/sdk.md](../../docs/sdk.md).
+(`ctypes`), Python 3.9 or later, no runtime dependencies, typed (`py.typed`).
 
 ```text
-pip install ./sdk/python           # or: PYTHONPATH=sdk/python
+pip install git+https://github.com/hitl-systems/latai-py
 ```
 
+This installs the Python package only. The latai engine (`liblatai`) is not in this repository. Until the
+platform wheels with the engine inside are published, unpack the core archive for your platform and point
+`LATAI_LIB` at it. One core is pinned so far: Linux x86_64, glibc 2.28 or newer.
+
 `liblatai` is found through `LATAI_LIB` (a file or its folder), `LATAI_LIB_DIR`, `Runtime.open(lib=...)`,
-the package folder, a source checkout's `target/debug`, the system folders, or the loader path.
+the package folder (`latai/_core/` in a platform wheel), the system folders, or the loader path.
 
 ```python
 import latai
